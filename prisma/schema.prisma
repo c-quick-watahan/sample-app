@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
 }
 
 datasource db {
@@ -13,15 +12,20 @@ datasource db {
 }
 
 model User {
-  id    Int    @id @default(autoincrement())
+  id    String @id @default(cuid())
   name  String
+  email String
   posts Post[]
+
+  @@map("user")
 }
 
 model Post {
   id        Int     @id @default(autoincrement())
   title     String
   published Boolean @default(true)
-  authorId  Int
+  authorId  String  @map("author_id")
   author    User    @relation(fields: [authorId], references: [id])
+
+  @@map("post")
 }
