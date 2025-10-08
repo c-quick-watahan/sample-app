@@ -3,6 +3,22 @@ import NextAuth, { Session, User } from "next-auth";
 import { JWT } from "next-auth/jwt";
 import GithubProvider from "next-auth/providers/github";
 
+declare module "next-auth" {
+  interface Session {
+    userId?: string;
+    user?: {
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    userId?: string;
+  }
+}
 export const authOptions = {
   providers: [
     GithubProvider({
@@ -33,9 +49,8 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }: { session: Session; token: JWT }) {
-      // Send properties to the client, like an access_token from a provider.
-      if (session.user) {
-        (session as any).userId = token.userId;
+      if (token.userId) {
+        session.userId = token.userId;
       }
       return session;
     },
