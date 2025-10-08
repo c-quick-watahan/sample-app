@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
-import NextAuth from "next-auth";
+import NextAuth, { Session, User } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import GithubProvider from "next-auth/providers/github";
 
 export const authOptions = {
@@ -10,21 +11,20 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }: { token: JWT; user?: User }) {
       // Persist the OAuth access_token to the token right after signin
       if (user) {
         // Do DB work in jwt callback itself. On first call when user exists, query/create your DB user,
         // then add that id to the token you return.
         try {
           const dbUser = await prisma.user.upsert({
-            where: { email: user.email },
+            where: { email: user.email! },
             update: {}, // Don't update anything if they exist
             create: {
-              email: user.email,
-              name: user.name,
+              email: user.email!,
+              name: user.name || "Anonymous",
             },
           });
-
           token.userId = dbUser.id;
         } catch (error) {
           throw error;
@@ -32,22 +32,15 @@ export const authOptions = {
       }
       return token;
     },
-    async session({
-      session,
-      token,
-      user,
-    }: {
-      session: any;
-      token: any;
-      user: any;
-    }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       // Send properties to the client, like an access_token from a provider.
-      session.accessToken = token.accessToken;
+      if (session.user) {
+        (session as any).userId = token.userId;
+      }
       return session;
     },
   },
 };
 
 export const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
